@@ -1,4 +1,5 @@
 import os
+import kagglehub
 import cv2
 import random
 import numpy as np
@@ -11,14 +12,18 @@ from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, Reshape, Bidirectional, LSTM, Dense, Lambda, Activation, BatchNormalization, Dropout
 from keras.optimizers import Adam
 
-train = pd.read_csv('/kaggle/input/handwriting-recognition/written_name_train_v2.csv')
-valid = pd.read_csv('/kaggle/input/handwriting-recognition/written_name_validation_v2.csv')
+
+# path = kagglehub.dataset_download("landlord/handwriting-recognition")
+# print("Path to dataset files:", path)
+
+train = pd.read_csv('/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/written_name_train_v2.csv')
+valid = pd.read_csv('/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/written_name_validation_v2.csv')
 
 plt.figure(figsize=(15, 10))
 
 for i in range(6):
     ax = plt.subplot(2, 3, i+1)
-    img_dir = '/kaggle/input/handwriting-recognition/train_v2/train/'+train.loc[i, 'FILENAME']
+    img_dir = '/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/train_v2/train/'+train.loc[i, 'FILENAME']
     image = cv2.imread(img_dir, cv2.IMREAD_GRAYSCALE)
     plt.imshow(image, cmap = 'gray')
     plt.title(train.loc[i, 'IDENTITY'], fontsize=12)
@@ -39,7 +44,7 @@ plt.figure(figsize=(15, 10))
 
 for i in range(6):
     ax = plt.subplot(2, 3, i+1)
-    img_dir = '/kaggle/input/handwriting-recognition/train_v2/train/'+unreadable.loc[i, 'FILENAME']
+    img_dir = '/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/train_v2/train/'+unreadable.loc[i, 'FILENAME']
     image = cv2.imread(img_dir, cv2.IMREAD_GRAYSCALE)
     plt.imshow(image, cmap = 'gray')
     plt.title(unreadable.loc[i, 'IDENTITY'], fontsize=12)
@@ -78,7 +83,7 @@ valid_size= 3000
 train_x = []
 
 for i in range(train_size):
-    img_dir = '/kaggle/input/handwriting-recognition/train_v2/train/'+train.loc[i, 'FILENAME']
+    img_dir = '/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/train_v2/train/'+train.loc[i, 'FILENAME']
     image = cv2.imread(img_dir, cv2.IMREAD_GRAYSCALE)
     image = preprocess(image)
     image = image/255.
@@ -87,7 +92,7 @@ for i in range(train_size):
     valid_x = []
 
 for i in range(valid_size):
-    img_dir = '/kaggle/input/handwriting-recognition/validation_v2/validation/'+valid.loc[i, 'FILENAME']
+    img_dir = '/mnt/c/Users/evane/.cache/kagglehub/datasets/landlord/handwriting-recognition/versions/1/validation_v2/validation/'+valid.loc[i, 'FILENAME']
     image = cv2.imread(img_dir, cv2.IMREAD_GRAYSCALE)
     image = preprocess(image)
     image = image/255.
@@ -191,11 +196,15 @@ ctc_loss = Lambda(ctc_lambda_func, output_shape=(1,), name='ctc')([y_pred, label
 model_final = Model(inputs=[input_data, labels, input_length, label_length], outputs=ctc_loss)
 
 # the loss calculation occurs elsewhere, so we use a dummy lambda function for the loss
-model_final.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=Adam(lr = 0.0001))
+model_final.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=Adam(learning_rate = 0.0001))
 
-model_final.fit(x=[train_x, train_y, train_input_len, train_label_len], y=train_output, 
-                validation_data=([valid_x, valid_y, valid_input_len, valid_label_len], valid_output),
-                epochs=5, batch_size=64)
+model_final.fit(
+    x=[train_x, train_y, train_input_len, train_label_len],
+    y=train_output,
+    validation_data=([valid_x, valid_y, valid_input_len, valid_label_len], valid_output),
+    epochs=10,
+    batch_size=64
+)
 
 preds = model.predict(valid_x)
 decoded = K.get_value(K.ctc_decode(preds, input_length=np.ones(preds.shape[0])*preds.shape[1], 
@@ -225,3 +234,6 @@ for i in range(valid_size):
     
 print('Correct characters predicted : %.2f%%' %(correct_char*100/total_char))
 print('Correct words predicted      : %.2f%%' %(correct*100/valid_size))
+
+model.save("handwriting-recognition.h5")
+print("Training complete! Model saved.")
