@@ -202,7 +202,7 @@ model_final.fit(
     x=[train_x, train_y, train_input_len, train_label_len],
     y=train_output,
     validation_data=([valid_x, valid_y, valid_input_len, valid_label_len], valid_output),
-    epochs=10,
+    epochs=60,
     batch_size=64
 )
 
